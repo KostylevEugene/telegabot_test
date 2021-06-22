@@ -1,27 +1,29 @@
+from db import db, get_or_create_user
 from glob import glob   # module finds all the pathnames matching a specified pattern
-from random import randint, choice
-from utils import get_smile, play_random_numb, main_keybord
+from random import choice
+from utils import play_random_numb, main_keybord
+import os
 
 def greet_user(update, context):
     # update - information about user from telegram
     # context - commands from function
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     print("Called /start")
-    context.user_data['emoji'] = get_smile(context.user_data)
     update.message.reply_text(
-        f"Hello user!{context.user_data['emoji']}",
+        f"Hello user!{user['emoji']}",
         reply_markup=main_keybord()
     )
 
 
 def talk_to_me(update, context):
-    context.user_data['emoji'] = get_smile(context.user_data)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     text = update.message.text
     print(text)
-    update.message.reply_text(f'{text} {context.user_data["emoji"]}', reply_markup=main_keybord())
+    update.message.reply_text(f'{text} {user["emoji"]}', reply_markup=main_keybord())
 
 
 def guess_numb(update, context):
-    print(context.args)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     if context.args:    # context.args - data after calling function
         try:
             user_numb = int(context.args[0])
@@ -34,6 +36,7 @@ def guess_numb(update, context):
 
 
 def send_cat(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     cat_photo_list = glob('images/cat*.jpg')
     cat_photo_filename = choice(cat_photo_list)
     chat_id = update.effective_chat.id
@@ -44,9 +47,22 @@ def send_cat(update, context):
 
 
 def user_coordinates(update, context):
-    context.user_data['emoji'] = get_smile(context.user_data)
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
     coords = update.message.location
     update.message.reply_text(
-        f'Your coordinates {coords} {context.user_data["emoji"]}!',
+        f'Your coordinates {coords} {user["emoji"]}!',
         reply_markup=main_keybord()
     )
+
+
+def check_user_photo(update, context):
+    user = get_or_create_user(db, update.effective_user, update.message.chat.id)
+    update.message.reply_text("Processing the photo")
+    os.makedirs('downloads', exist_ok=True)
+    user_photo = context.bot.getFile(update.message.photo[-1].file_id)
+    file_name = os.path.join('downloads', f'{user_photo.file_id}.jpg')      #   os.path.join - join folders in
+                                                                            #           the path in a right way
+    user_photo.download(file_name)
+
+    update.message.reply_text("The photo is saved on disk")
+
